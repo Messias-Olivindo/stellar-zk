@@ -68,7 +68,53 @@ O projeto usa Stellar nao apenas como infraestrutura generica de smart contracts
 - **RWA e anchors** abrem caminho para casos institucionais e cross-border.
 - **Agentic payments** ficam mais seguros quando o agente opera sob politicas verificaveis.
 
-## 6. Clientes E Usuarios Alvo
+## 6. Panorama Competitivo E Posicionamento
+
+Essa ideia nao deve ser apresentada como algo que nao existe em nenhuma forma. O mercado ja esta atacando a dor de wallets seguras para agentes.
+
+Exemplos relevantes:
+
+- **Circle Agent Stack:** oferece agent wallets, spending controls, compliance guardrails e limites de uso para agentes que movimentam stablecoins.
+- **Turnkey:** oferece agentic wallets com politicas por endereco, contrato, escopo de permissao e limites de gasto.
+- **Fireblocks Agentic Payments:** oferece uma solucao enterprise para pagamentos iniciados por agentes, com policy engine, KYT, Travel Rule e audit trail.
+- **x402 / Stellar x402:** permite que agentes paguem APIs e servicos usando stablecoins, incluindo fluxos sobre Stellar.
+- **zkMe, Privado ID e projetos de ZK identity:** resolvem partes de identidade, KYC/KYB e credenciais privadas, mas nao sao um vault de pagamento Stellar-native.
+
+Portanto, o pitch correto nao e "ninguem faz wallets seguras para agentes". Esse espaco ja existe.
+
+O posicionamento mais defensavel e:
+
+**"Ja existem agent wallets com policy controls, mas ainda falta uma camada aberta, Stellar-native e privacy-preserving para enforcement de politicas de pagamento em Soroban."**
+
+O diferencial do Agent Payment Vault esta no recorte:
+
+- enforcement de politicas diretamente em um contrato Soroban;
+- foco em pagamentos, USDC, stablecoins e RWAs na Stellar;
+- transparencia e auditabilidade on-chain;
+- privacidade opcional com ZK para whitelists, credenciais e politicas sensiveis;
+- composabilidade com agentes, x402 e apps que precisam mover dinheiro de forma programatica.
+
+Em outras palavras: Turnkey, Circle e Fireblocks validam a dor. O projeto se diferencia por ser uma implementacao aberta, demonstravel em Stellar e com privacy-preserving compliance como parte nativa do design.
+
+A diferenca principal esta em **onde a confianca fica**. Nas plataformas atuais, a politica geralmente e aplicada pela infraestrutura da propria plataforma: uma wallet gerenciada, um policy engine custodial, um enclave, um backend ou uma suite enterprise. No Agent Payment Vault, a regra critica vive no contrato Soroban que segura os fundos. O contrato e ao mesmo tempo o cofre e o juiz.
+
+Comparacao direta:
+
+| Solucao | O que faz | Diferenca do Agent Payment Vault |
+| --- | --- | --- |
+| Circle Agent Stack | Agent wallets, spending controls, compliance guardrails e pagamentos com stablecoins. | E uma stack de wallets e infraestrutura da Circle. O Agent Payment Vault seria um vault aberto em Soroban, Stellar-native, com enforcement on-chain e ZK opcional. |
+| Turnkey | Wallets programaveis com policy engine, limites, permissoes e key management. | Forte em custody/key management, mas o enforcement depende da infraestrutura da Turnkey. No Agent Payment Vault, o contrato segura o dinheiro e aplica a regra na Stellar. |
+| Fireblocks Agentic Payments | Solucao enterprise para pagamentos iniciados por agentes, com KYT, Travel Rule, audit trail e policy engine. | Mais maduro para instituicoes, mas fechado e enterprise. O Agent Payment Vault e uma primitive aberta e composavel on-chain. |
+| x402 / Stellar x402 | Protocolo para agentes pagarem APIs e servicos usando stablecoins. | x402 resolve o "como pagar". O Agent Payment Vault resolve "quem pode pagar, quanto, para quem e sob qual politica". |
+| zkMe / Privado ID | ZK identity, KYC/KYB e credenciais privadas. | Eles provam identidade ou credencial. O Agent Payment Vault usa esse tipo de prova para liberar ou bloquear fundos em um vault. |
+
+Resumo do posicionamento:
+
+**As plataformas atuais dao wallets com controles. O Agent Payment Vault propoe uma camada de execucao: o dinheiro fica preso em Soroban e so sai se a politica for verificavel.**
+
+Isso nao significa que o projeto seja mais completo que Circle, Turnkey ou Fireblocks. Essas plataformas sao mais maduras em custody, UX enterprise, integracoes e compliance regulatorio. Para o hackathon, o objetivo e mostrar uma primitive aberta em Soroban: **policy enforcement verificavel e privado para pagamentos autonomos na Stellar**.
+
+## 7. Clientes E Usuarios Alvo
 
 O primeiro ICP para hackathon nao precisa ser um hedge fund. O caso inicial deve ser mais direto:
 
@@ -78,7 +124,7 @@ O primeiro ICP para hackathon nao precisa ser um hedge fund. O caso inicial deve
 - **Empresas com stablecoin treasury:** times que querem automatizar operacoes sem entregar uma chave livre ao agente.
 - **Projetos de agentic commerce:** agentes que compram servicos digitais, dados, compute ou chamadas de API.
 
-## 7. Diferenciais
+## 8. Diferenciais
 
 - **Seguranca por design:** o agente nunca tem permissao irrestrita para mover fundos.
 - **Governanca verificavel:** regras criticas sao aplicadas pelo contrato, nao apenas por um backend.
@@ -86,7 +132,7 @@ O primeiro ICP para hackathon nao precisa ser um hedge fund. O caso inicial deve
 - **Demo objetiva:** sucesso e falha podem ser mostrados em poucos minutos.
 - **Aderencia ao ecossistema Stellar:** foco em pagamentos, stablecoins e ativos reais.
 
-## 8. Modelo De Produto
+## 9. Modelo De Produto
 
 O produto final pode evoluir para uma camada B2B de governanca para agentic payments:
 
@@ -96,7 +142,7 @@ O produto final pode evoluir para uma camada B2B de governanca para agentic paym
 - **Relatorios de compliance:** historico auditavel de execucoes aprovadas e bloqueadas.
 - **Fee por volume ou por vault:** monetizacao alinhada ao valor protegido.
 
-## 9. Escopo Tecnico Do MVP
+## 10. Escopo Tecnico Do MVP
 
 Componentes recomendados:
 
@@ -129,15 +175,17 @@ Componentes recomendados:
    - pagamentos aprovados;
    - tentativas bloqueadas.
 
-## 10. Pitch
+## 11. Pitch
 
 **Agentes de IA vao mover dinheiro. O problema e que uma wallet normal da poder demais ao agente. O Agent Payment Vault transforma uma carteira Stellar em um cofre programavel: o agente pode propor pagamentos, mas so o contrato decide se eles respeitam as politicas de compliance. Com ZK, a empresa pode provar que a regra foi cumprida sem revelar toda a sua politica interna.**
+
+**O projeto nao tenta competir como mais uma wallet custodial para agentes. Ele propoe uma camada aberta de policy enforcement em Soroban, usando Stellar como trilho de pagamento e ZK para privacidade de compliance.**
 
 Uma frase curta para apresentacao:
 
 **"Safe policy vaults for autonomous agents on Stellar."**
 
-## 11. Proximos Passos
+## 12. Proximos Passos
 
 1. Definir a policy inicial: limite por transacao, limite diario e whitelist.
 2. Implementar o vault Soroban com regras publicas basicas.
