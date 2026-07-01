@@ -132,7 +132,49 @@ O primeiro ICP para hackathon nao precisa ser um hedge fund. O caso inicial deve
 - **Demo objetiva:** sucesso e falha podem ser mostrados em poucos minutos.
 - **Aderencia ao ecossistema Stellar:** foco em pagamentos, stablecoins e ativos reais.
 
-## 9. Modelo De Produto
+## 9. Pontos Negativos E Riscos
+
+A ideia tem um recorte defensavel para um hackathon da Stellar, mas tambem tem fragilidades importantes que precisam ser reconhecidas no pitch e no escopo do MVP.
+
+1. **Concorrencia forte e bem financiada**
+
+   Circle, Turnkey e Fireblocks ja estao atacando agent wallets, policy controls e pagamentos por agentes. Mesmo que o recorte Stellar/Soroban/ZK seja diferente, o problema geral ja tem players muito mais maduros.
+
+2. **Diferencial pode parecer pequeno se o ZK nao for convincente**
+
+   Se o MVP tiver apenas limite por transacao, limite diario e whitelist publica, ele pode parecer um smart contract comum de permissoes. Para justificar "ZK compliance", a demo precisa mostrar uma prova realmente util, como whitelist privada, credencial privada ou politica sensivel verificada sem exposicao total.
+
+3. **Soroban ainda tem ecossistema menor que EVM**
+
+   Para um hackathon da Stellar isso e aceitavel e ate desejavel, mas como produto real pode ser uma desvantagem: menos tooling, menos bibliotecas prontas, menos integracoes com wallets, agentes e infraestrutura institucional.
+
+4. **Compliance real nao e so regra on-chain**
+
+   Um contrato consegue bloquear valores, ativos e destinatarios, mas nao resolve sozinho AML, KYC, KYB, sancoes, Travel Rule, fraude, chargeback, auditoria regulatoria ou responsabilidade legal. O pitch precisa evitar a mensagem de que "ZK resolve compliance" de forma ampla.
+
+5. **O agente ainda depende de infraestrutura off-chain**
+
+   O agente, o prover, o dashboard e a configuracao das politicas continuam fora da blockchain. Se o prover for centralizado ou mal implementado, parte da confianca continua fora do contrato. O MVP precisa deixar claro quais garantias estao on-chain e quais continuam off-chain.
+
+6. **Politicas privadas podem conflitar com auditoria**
+
+   Empresas querem privacidade, mas reguladores, auditores e times internos podem exigir explicabilidade. Em alguns contextos, "a prova passou" nao basta; alguem precisa conseguir revisar a regra, os dados e o motivo da aprovacao.
+
+7. **Pode ser resolvido de forma mais simples em muitos casos**
+
+   Para varias empresas, uma wallet multisig, uma policy engine centralizada, uma conta programavel ou um backend com aprovacao humana ja resolvem suficientemente bem. O projeto precisa escolher casos onde on-chain + ZK tragam uma vantagem clara, como whitelist privada, compliance auditavel ou automacao de pagamentos por agentes sem chave irrestrita.
+
+8. **Responsabilidade de custody e bugs e alta**
+
+   Se o vault segura dinheiro, qualquer bug no contrato, erro de configuracao ou falha de atualizacao vira risco financeiro direto. Isso aumenta a exigencia de auditoria, testes e controles de emergencia, mesmo em um MVP.
+
+9. **Mercado de agentic payments ainda e inicial**
+
+   A tese e promissora, mas a demanda real ainda esta se formando. Pode ser cedo demais para um produto B2B amplo, especialmente fora de nichos como pagamentos de APIs, compute, cross-border, tesouraria com stablecoins e automacao de repasses.
+
+Os tres riscos mais importantes para o hackathon sao: ZK parecer desnecessario, a narrativa ser engolida por players maiores de agent wallets e o MVP tentar cobrir compliance demais. A melhor mitigacao e focar em uma demo especifica: **whitelist privada para pagamentos de agentes em USDC na Stellar**.
+
+## 10. Modelo De Produto
 
 O produto final pode evoluir para uma camada B2B de governanca para agentic payments:
 
@@ -142,7 +184,7 @@ O produto final pode evoluir para uma camada B2B de governanca para agentic paym
 - **Relatorios de compliance:** historico auditavel de execucoes aprovadas e bloqueadas.
 - **Fee por volume ou por vault:** monetizacao alinhada ao valor protegido.
 
-## 10. Escopo Tecnico Do MVP
+## 11. Escopo Tecnico Do MVP
 
 Componentes recomendados:
 
@@ -175,7 +217,7 @@ Componentes recomendados:
    - pagamentos aprovados;
    - tentativas bloqueadas.
 
-## 11. Pitch
+## 12. Pitch
 
 **Agentes de IA vao mover dinheiro. O problema e que uma wallet normal da poder demais ao agente. O Agent Payment Vault transforma uma carteira Stellar em um cofre programavel: o agente pode propor pagamentos, mas so o contrato decide se eles respeitam as politicas de compliance. Com ZK, a empresa pode provar que a regra foi cumprida sem revelar toda a sua politica interna.**
 
@@ -185,7 +227,7 @@ Uma frase curta para apresentacao:
 
 **"Safe policy vaults for autonomous agents on Stellar."**
 
-## 12. Proximos Passos
+## 13. Proximos Passos
 
 1. Definir a policy inicial: limite por transacao, limite diario e whitelist.
 2. Implementar o vault Soroban com regras publicas basicas.
