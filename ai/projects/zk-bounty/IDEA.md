@@ -1,74 +1,120 @@
-# ZK-Bounty: Bug Bounty com Escrow Trustless e Prova ZK na Stellar
+# ZK-Bounty: Descoberta Verificável de Vulnerabilidades em Soroban com Reputação On-Chain
 
 ## 1. Visão Geral
 
-O ZK-Bounty é um protocolo de intermediação para bug bounties em que pesquisadores de segurança podem provar matematicamente que descobriram uma vulnerabilidade sem revelar o exploit inteiro antes que a recompensa seja garantida.
+O **ZK-Bounty** é um protocolo de segurança on-chain especificamente para **Soroban smart contracts**, onde pesquisadores de segurança descobrem vulnerabilidades provando criptograficamente que conhecem um input que viola uma **invariante do contrato** — sem revelar o exploit até que a recompensa seja garantida e a reputação on-chain seja creditada.
 
-A proposta usa Zero-Knowledge Proofs para transformar a confiança mútua em confiança matemática:
+A proposta transforma duas dinâmicas do mercado de segurança:
 
-- o hacker prova que conhece um witness que dispara uma condição de falha predefinida;
-- a empresa ou o protocolo publica o desafio e deposita a recompensa;
-- o contrato Soroban valida a prova e trava o pagamento;
-- o exploit pode ser revelado somente depois que a recompensa estiver assegurada.
+1. **De desconfiança para confiança matemática:** O pesquisador prova via ZK que conhece uma entrada que quebra uma invariante pública do contrato. A prova não expõe a entrada, mas é verificável on-chain e impossível forjar.
+2. **De one-shot para reputação duradoura:** Cada descoberta bem-sucedida incrementa um score on-chain do pesquisador (`reputation_score = vulnerabilidades_encontradas + taxa_de_acurácia + severidade_média`). O score não é vanity — impacta futuras recompensas e acesso a bugbounties premium.
 
-Em vez de vender a ideia como uma plataforma genérica de bounty, a proposta é apresentada como uma primitive de escrow criptográfico para disclosures privados e verificáveis.
+Todo o fluxo acontece na Stellar: o contrato escrow em Soroban custodia USDC, verifica a prova ZK, libera pagamento e registra reputação no próprio ledger de Soroban.
 
 ## 2. Dor Que O MVP Resolve
 
-O mercado atual de bug bounty sofre de um problema estrutural de confiança bidirecional:
+Projetos Soroban enfrentam um dilema crítico:
 
-- o hacker teme reportar a falha gratuitamente e a empresa corrigir o problema sem pagar;
-- a empresa teme pagar por um relatório falso, duplicado ou irrelevante;
-- plataformas centralizadas cobram taxas altas, demoram a processar pagamentos e exigem mediação humana.
+- **Descobrir antes de deploy:** Auditorias caras, tempo limitado, cobertura incompleta.
+- **Descobrir após deploy:** Vulnerabilidades vivas no mainnet afetam usuários; descobridor terá incentivo para explorar, não reportar (moral hazard).
+- **Mediação centralizada:** Immunefi e HackerOne ficam no meio, cobram 10%+, avaliam relatórios manualmente, podem recusar pagamento sem justificativa matemática.
 
-O ZK-Bounty resolve essa dor ao separar claramente duas etapas:
+O **ZK-Bounty** resolve três problemas simultâneos:
 
-1. provar que a falha existe;
-2. garantir pagamento sem expor o exploit antes do fechamento do fluxo.
+1. **Segurança permanente:** Qualquer pessoa pode descobrir vulnerabilidades pós-deploy, com garantia criptográfica de recompensa (não depende de empresa aceitar).
+2. **Incentivo correto:** Pesquisador prova que conhece o bug (e o know-how vale dinheiro). Reputação on-chain funciona como título — pesquisador com score alto ganha acesso a auditorias premium e recompensas maiores.
+3. **Trustless e barato:** Soroban custodia o dinheiro, ZK verifica a prova, contrato libera USDC automaticamente. Sem mediador.
+
+O diferencial é que **ZK prova o conhecimento, não o relatório**. Isso inverte a curva de incentivos: descobrir passa a compensar mais que explorar.
 
 ## 3. Como Funciona
 
-1. A empresa ou protocolo publica um desafio de segurança com uma regra pública simples, por exemplo: "existem inputs que fazem o sistema atingir um estado de erro predefinido".
-2. O hacker gera uma prova ZK localmente, sem enviar o exploit completo para a plataforma.
-3. O contrato Soroban recebe a prova e verifica se a condição foi satisfeita.
-4. Se a prova for válida, o contrato trava a recompensa para o endereço do pesquisador.
-5. O hacker então revela o exploit de forma privada ou gradual, e a empresa confirma o recebimento.
-6. O pagamento é liberado automaticamente ou por timeout, dependendo do fluxo escolhido.
+**Fluxo com reputação on-chain:**
 
-## 4. Onde Entra ZK
+1. **Criação do bounty:** Protocolo/desenvolvedor Soroban publica uma **invariante pública** (p.ex., `total_supply() >= sum_of_balances()` ou `nonce > 0 para transações válidas`). Deposita USDC como recompensa no contrato escrow Soroban. A invariante é **testável e verificável** — não é uma description subjetiva.
 
-O ZK é a peça central e não um adorno. Ele é load-bearing porque permite provar uma afirmação sensível sem revelar o witness.
+2. **Descoberta:** Pesquisador encontra um input/trace que viola a invariante. Gera uma **prova ZK off-chain** mostrando que conhece esse input sem revelar qual é:
+   - Prova: `∃ input : invariante(contrato_soroban, input) = false`
+   - Isso é concreto: o pesquisador está provando que a invariante específica daquele contrato Soroban é violável.
 
-No MVP, a prova pode demonstrar algo simples e convincente, como:
+3. **Submissão e Verificação:** Pesquisador envia a prova para o contrato escrow Soroban. O contrato verifica a prova usando as host functions nativas de BN254 + Poseidon (Protocol 26 / Yardstick). Se válida:
+   - Contrato trava o pagamento USDC para o endereço do pesquisador.
+   - Incrementa `reputation_score` on-chain do pesquisador.
+   - Registra descoberta no histórico público.
 
-- "eu conheço um input secreto x que faz o programa atingir um estado de erro Y";
-- "eu conheço um witness que satisfaz uma condição fixa de vulnerabilidade";
-- "eu conheço uma entrada que faz um dado predicado falhar sem revelar a entrada em si".
+4. **Divulgação Responsável:** Pesquisador revela o exploit de forma privada ao desenvolvedor. Desenvolvedor tem N dias para fazer patch. Após patch + verificação:
+   - Pesquisador pode gerar uma **"re-prova"** mostrando que a invariante agora passa.
+   - Contrato marca descoberta como `PATCHED_VERIFIED` — novo milestone de reputação.
 
-Essas provas são mais simples de implementar do que provar execução completa de um software arbitrário, mas ainda mostram o valor real do ZK e o fluxo de confiança.
+5. **Liberação e Reputação:** Pagamento é liberado automaticamente (sem mediação). Reputação do pesquisador passa a influenciar:
+   - Acesso a bounties premium (maiores recompensas, contratos mais críticos).
+   - Multiplicador de recompensa: pesquisador com score 100 recebe +20% em recompensas futuras.
+   - Visibilidade pública: leaderboard on-chain.
 
-## 5. Por Que Stellar
+## 4. Onde Entra ZK (Load-Bearing)
 
-A proposta combina bem com Stellar porque a rede é forte em pagamentos, stablecoins e contratos com custo baixo.
+O ZK é **obrigatório** em três pontos — não é decorativo:
 
-- Soroban permite implementar o escrow e a verificação de proofs com custo relativamente baixo.
-- USDC e XLM tornam a recompensa fácil de demonstrar.
-- A liquidez e os fluxos cross-border ajudam na distribuição de recompensas e no uso real do protocolo.
-- As primitivas de ZK e os avanços do protocolo tornam a verificação on-chain mais viável do que em redes com gas elevado.
+### 4.1 Prova de Descoberta
+**Problema:** Pesquisador diz "encontrei bug" — como provar sem revelar?
+**Solução ZK:** Pesquisador prova `∃ input : invariante(input) = false` sem revelar qual é o input.
+
+- Circuito ZK recebe como witness privado: `input_secreto, estado_inicial, estado_final`
+- Circuito prova (publicamente):
+  - Executa o contrato Soroban simulado com `input_secreto`
+  - Verifica que `invariante(estado_final) = false`
+  - Publica um **commitment Poseidon** do input (para impedir re-uso)
+- Output: prova Groth16 verificável on-chain, sem expor `input_secreto`
+
+**Por que ZK e não hash simples?** Porque o contrato precisa verificar que a execução ocorreu corretamente, não só que um hash bate. Com Soroban como sistema-alvo, a prova refere-se diretamente à máquina de estados do contrato.
+
+### 4.2 Re-prova de Patch
+**Problema:** Como verificar que o patch realmente consertou a falha?
+**Solução ZK:** Pesquisador prova que o mesmo input agora passa na invariante:
+- `∃ input : invariante_novo(input) = true AND input_commitment == commitment_antigo`
+- A re-prova usa o mesmo commit do input original, vinculando a descoberta ao patch verificado.
+
+### 4.3 Reputação Tokenizada (Opcional mas Potente)
+**Evolução:** Score do pesquisador pode virar token (SBT / soulbound token) em Soroban:
+- Mercado secundário de reputação: projetos competem por pesquisadores high-score
+- Staking: pesquisador coloca reputação em risco para validar bounties de terceiros (oráculo descentralizado)
+
+Sem ZK, seria impossível vincular reputação de forma criptográfica ao histórico de descobertas.
+
+## 5. Por Que Stellar (Não Genérico)
+
+ZK-Bounty não é um bounty genérico em Stellar — é um **bounty específico para Soroban**. Isso muda tudo:
+
+- **Alvo concreto:** A invariante é um predicado Soroban. O contrato escrow é um contrato Soroban. A prova refere-se diretamente à máquina de estados de Soroban. Não é "bug em qualquer coisa", é "bug neste contrato nesta rede".
+
+- **Host functions nativas:** Stellar Protocol 26 (Yardstick) adicionou 9 host functions BN254 especificamente para tornar verificação de proofs barata em Soroban. ZK-Bounty **dogfoods** essas primitivas — não é demo teórica, é demo que só é viável/barata em Stellar hoje.
+
+- **Ecossistema Soroban:** Todo protocolo novo em Soroban herda risco de bug. ZK-Bounty oferece uma **infraestrutura pública de segurança permanente**. Não é terceirizado para Immunefi; fica na rede.
+
+- **USDC e XLM:** Recompensas em stablecoin (USDC) tornam o incentivo real. Reputação é registrada em XLM/Soroban ledger.
+
+- **Custo:** Verificar uma prova Groth16 em Soroban custa ~1-2 XLM. Em Ethereum custaría 100x mais. Isso torna o modelo economicamente viável.
+
+**Portanto:** ZK-Bounty não usa Stellar como blockchain genérico; **Stellar é o elo crítico** — sem as host functions de Protocol 26 e Soroban, a verificação seria inviável ou muito cara.
 
 ## 6. Panorama Competitivo e Posicionamento
 
-O mercado já tem plataformas de bug bounty, mas elas são majoritariamente centralizadas e dependem de mediação humana.
+| Competidor | Modelo | Diferença do ZK-Bounty |
+|---|---|---|
+| **HackerOne / Bugcrowd** | Plataforma centralizada, curadoria humana, 10-15% de taxa. | Centralizadas; dependem de mediador. ZK-Bounty é trustless, paga automaticamente, sem taxa. |
+| **Immunefi** | Especializada em Web3, depende de triagem e avaliação. | Boa em Web3, mas avaliação é manual. ZK-Bounty: prova é matemática, sem avaliador. |
+| **Cantina** | Auditorias compartilhadas, menos profundo que auditorias full. | Modelo de auditoria, não contínuo. ZK-Bounty: segurança permanente pós-deploy. |
+| **OpenZeppelin Audit** | Auditorias profundas off-chain antes de deploy. | Pré-deploy, não contínuo. ZK-Bounty: pós-deploy, contínuo, incentiva descoberta. |
 
-Exemplos relevantes:
+O **posicionamento defensável**:
 
-- HackerOne e Bugcrowd: centralizadas, com taxas elevadas e processo manual.
-- Immunefi: forte no espaço Web3, mas ainda depende de triagem e avaliação intermediada.
-- Plataformas tradicionais de segurança: focam em reputação, não em confiança matemática.
+**"Não é mais uma plataforma de bounty — é uma camada de segurança verificável para Soroban onde descobertas são comprovadas por ZK, recompensas são automáticas, e reputação de pesquisador é on-chain e duradoura."**
 
-O posicionamento defensável do ZK-Bounty é este:
-
-**“Não é mais uma plataforma de bug bounty; é um protocolo de escrow criptográfico para disclosure privado, com prova matemática de validade.”**
+Diferenciais:
+- **Trustless:** Sem mediador; contrato verifica prova e paga automaticamente.
+- **Específico para Soroban:** Invariantes são predicados Soroban reais, não genéricas.
+- **Reputação on-chain:** Score do pesquisador é ativo público com impacto econômico.
+- **Segurança contínua:** Não é pré-deploy; é pós-deploy permanente.
 
 ## 7. Clientes e Usuários Alvo
 
