@@ -1,64 +1,89 @@
 # Development Plan: ZK-Bounty Hackathon MVP
 
-## 1. Objetivo
+## 1. Escopo fechado
 
 Construir uma demo funcional da ZK-Bounty com a seguinte tese:
 
-**Um pesquisador encontra um input privado que quebra uma invariante de um contrato Soroban. Ele gera uma prova ZK sem revelar o input. Um contrato Soroban verifica a prova, reserva a recompensa e atualiza a reputacao on-chain.**
+**Um pesquisador encontra um input privado que quebra uma invariante publica de um contrato Soroban. Ele gera uma prova ZK off-chain sem revelar o input. Um contrato Soroban verifica a prova, reserva a recompensa e atualiza a reputacao on-chain.**
 
-O MVP nao tenta provar execucao arbitraria da Soroban VM. Ele prova uma transicao pequena, publica e modelada em circuito, suficiente para demonstrar o mecanismo de bounty verificavel.
+O MVP e deliberadamente estreito:
 
-## 2. Arquitetura
+- alvo: um contrato Soroban demonstrativo de AMM vulneravel;
+- bug: quebra de invariante financeira de constant product;
+- prova: conhecimento de um `dx` privado que torna a invariante falsa;
+- chain: Soroban verifica a prova, guarda recompensa e registra reputacao;
+- disclosure: proof valida reserva recompensa; claim exige `report_hash`.
+
+O MVP **nao** tenta provar execucao arbitraria da Soroban VM, qualquer bug de qualquer contrato, RCE, API/web app real, severidade subjetiva, patch proof, reputacao tokenizada ou marketplace de bounties.
+
+## 2. Decisoes tecnicas
+
+| Area | Decisao para MVP |
+|---|---|
+| Prova ZK | **Circom + Groth16** |
+| Verificacao on-chain | Contrato Soroban Groth16 verifier, reaproveitando exemplo existente sempre que possivel |
+| Alvo da demo | AMM Soroban vulneravel |
+| Invariante | `new_x * new_y >= old_x * old_y` |
+| Witness privado | `dx` e `salt` |
+| Public inputs | `statement_hash`, `reserve_x`, `reserve_y`, `witness_commitment`, `nullifier` |
+| Anti-duplicata | `nullifier` armazenado no escrow |
+| Pagamento | Token mock no localnet; SAC/USDC testnet se sobrar tempo |
+| Reputacao | Storage simples no `BountyEscrow`, nao token |
+| UI | Opcional; CLI e logs on-chain bastam para demo tecnica |
+
+Noir/UltraHonk e RISC Zero ficam como caminhos futuros ou fallback apenas se Circom/Groth16 travar de forma irrecuperavel. Nao vamos manter varios paths em paralelo.
+
+## 3. Arquitetura
 
 ```text
 Protocol owner
-  -> create_bounty(invariant, target, reward)
-      -> BountyEscrow Soroban contract
-          -> stores reward and verifier reference
+  -> deploy vulnerable Soroban AMM
+  -> create_bounty(target, invariant, verifier, reward)
+      -> BountyEscrow
+          -> stores bounty metadata
+          -> escrows reward token
 
 Researcher
-  -> finds private witness
-  -> generates ZK proof locally
+  -> finds private dx
+  -> generates statement hash, witness commitment and nullifier
+  -> generates Groth16 proof locally
   -> submit_proof(proof, public_inputs)
       -> BountyEscrow
-          -> calls Verifier
-          -> locks reward
-          -> updates reputation
+          -> checks bounty metadata
+          -> checks nullifier unused
+          -> calls Groth16 verifier
+          -> reserves reward for researcher
+          -> emits ProofVerified / RewardLocked
+
+Researcher
+  -> submit_report_hash(report_hash)
+  -> claim_reward()
+      -> BountyEscrow
+          -> transfers reward
+          -> increments reputation
 ```
 
-Componentes:
+Componentes do repo a criar:
 
-1. **Target Soroban Contract**
-   - Contrato demonstrativo com bug financeiro.
-   - Exemplo recomendado: AMM com formula de swap vulneravel.
+```text
+contracts/
+  vulnerable-amm/       # contrato alvo didatico
+  bounty-escrow/        # escrow + reputacao minima
+  groth16-verifier/     # verifier integrado ou wrapper do exemplo Stellar
 
-2. **Invariant Circuit**
-   - Circuito Circom ou Noir que replica a transicao vulneravel.
-   - Prova que existe um input privado que viola a invariante.
+circuits/
+  amm_invariant.circom  # prova do invariant break
+  input.json            # exemplo local, sem segredo real
+  scripts/              # compile/prove/verify/export calldata
 
-3. **Verifier Contract**
-   - Contrato Soroban que verifica Groth16 ou UltraHonk.
-   - Para menor risco, priorizar Groth16 se o starter estiver funcionando.
+cli/
+  zk-bounty-demo        # comandos de demo: setup, find-witness, prove, submit, claim
 
-4. **Bounty Escrow Contract**
-   - Guarda recompensa em token Soroban.
-   - Guarda metadata do bounty.
-   - Recebe e verifica proof.
-   - Reserva ou libera recompensa.
-   - Atualiza reputacao.
+docs/
+  demo-script.md        # roteiro de video e comandos
+```
 
-5. **Researcher CLI**
-   - Encontra ou recebe o witness secreto.
-   - Gera proof localmente.
-   - Submete proof.
-   - Imprime status claro para video.
-
-6. **Demo UI opcional**
-   - Lista bounty aberto.
-   - Mostra status `OPEN`, `PROOF_VERIFIED`, `REWARD_LOCKED`, `CLAIMED`.
-   - Mostra leaderboard simples.
-
-## 3. Demo escolhida: AMM invariant bounty
+## 4. Demo escolhida: AMM invariant break
 
 ### Contrato alvo
 
@@ -84,29 +109,28 @@ Essa formula paga mais `y` do que deveria e pode reduzir o produto das reservas.
 (reserve_x + dx) * (reserve_y - dy_buggy) >= reserve_x * reserve_y
 ```
 
-O pesquisador deve provar que conhece um `dx` privado que torna a invariante falsa:
+O pesquisador prova que conhece um `dx` privado que torna a invariante falsa:
 
 ```text
 (reserve_x + dx) * (reserve_y - dy_buggy) < reserve_x * reserve_y
 ```
 
-### Por que essa demo e boa
+### Parametros de demo
 
-- E financeira e facil de visualizar.
-- O bug e realista o suficiente para DeFi.
-- A invariante e objetiva.
-- O input do exploit fica privado.
-- A prova e pequena o bastante para MVP.
-- O contrato de bounty e claramente Stellar-native.
+Usar numeros pequenos para evitar complexidade de overflow no circuito:
 
-## 4. Circuito ZK
+```text
+reserve_x, reserve_y, dx < 2^32
+reward_amount = 100 token units
+reputation_delta = 10
+```
+
+## 5. Circuito ZK
 
 ### Public inputs
 
 ```text
-bounty_id
-target_wasm_hash
-invariant_id
+statement_hash
 reserve_x
 reserve_y
 witness_commitment
@@ -126,34 +150,48 @@ salt
 1. dx > 0
 2. reserve_x > 0
 3. reserve_y > 0
-4. witness_commitment == Poseidon(dx, salt, bounty_id)
-5. nullifier == Poseidon(witness_commitment, bounty_id)
-6. dy_buggy == floor(reserve_y * dx / reserve_x)
-7. dy_buggy < reserve_y
-8. new_x == reserve_x + dx
-9. new_y == reserve_y - dy_buggy
-10. new_x * new_y < reserve_x * reserve_y
+4. reserve_x, reserve_y, dx < 2^32
+5. witness_commitment == Poseidon(statement_hash, dx, salt)
+6. nullifier == Poseidon(statement_hash, witness_commitment)
+7. reserve_y * dx == dy_buggy * reserve_x + remainder
+8. 0 <= remainder < reserve_x
+9. dy_buggy < reserve_y
+10. new_x == reserve_x + dx
+11. new_y == reserve_y - dy_buggy
+12. new_x * new_y < reserve_x * reserve_y
 ```
 
-Para evitar complexidade de overflow, usar bounds pequenos no MVP:
+Division deve ser modelada por quotient/remainder, nao por divisao direta:
 
 ```text
-reserve_x, reserve_y, dx < 2^32
-```
-
-Para division em circuito, representar:
-
-```text
+dy_buggy = floor(reserve_y * dx / reserve_x)
 reserve_y * dx == dy_buggy * reserve_x + remainder
 0 <= remainder < reserve_x
 ```
 
-## 5. Contrato BountyEscrow
+O circuito deve ter testes positivos e negativos antes da integracao Soroban.
 
-Interface sugerida:
+`statement_hash` e calculado pelo contrato e pela CLI a partir da metadata publica do bounty:
+
+```text
+statement_hash = Poseidon(
+  bounty_id,
+  target_wasm_hash,
+  invariant_id,
+  reserve_x,
+  reserve_y
+)
+```
+
+O circuito prova o invariant break para esse `statement_hash` e para essas reservas. Ele nao prova que executou a Soroban VM nem que analisou o WASM completo; essa e uma limitacao intencional do MVP.
+
+## 6. Contrato BountyEscrow
+
+### Interface
 
 ```rust
-initialize(admin: Address, reputation: Address)
+initialize(admin: Address)
+
 create_bounty(
     owner: Address,
     target_contract: Address,
@@ -162,8 +200,11 @@ create_bounty(
     verifier: Address,
     reward_token: Address,
     reward_amount: i128,
+    reserve_x: u64,
+    reserve_y: u64,
     deadline: u64
-)
+) -> BytesN<32>
+
 submit_proof(
     researcher: Address,
     bounty_id: BytesN<32>,
@@ -172,71 +213,103 @@ submit_proof(
     witness_commitment: BytesN<32>,
     nullifier: BytesN<32>
 )
+
 submit_report_hash(
     researcher: Address,
     bounty_id: BytesN<32>,
     report_hash: BytesN<32>
 )
-claim_reward(researcher: Address, bounty_id: BytesN<32>)
+
+claim_reward(
+    researcher: Address,
+    bounty_id: BytesN<32>
+)
+
 get_bounty(bounty_id: BytesN<32>)
+get_reputation(researcher: Address)
 ```
 
-Estados:
+### Estados
 
 ```text
 OPEN
 PROOF_VERIFIED
-REWARD_LOCKED
 REPORT_SUBMITTED
 CLAIMED
 CANCELLED
 EXPIRED
 ```
 
-Eventos:
+`REWARD_LOCKED` nao precisa ser estado separado; e consequencia de `PROOF_VERIFIED` com `reserved_researcher` preenchido.
+
+### Regras
 
 ```text
-BountyCreated
-ProofVerified
-RewardLocked
-ReportSubmitted
-RewardClaimed
-ReputationUpdated
+create_bounty:
+  - owner autoriza transferencia da recompensa
+  - contrato recebe/guarda reward_token
+  - grava target_wasm_hash, invariant_id, verifier, reserves e deadline
+
+submit_proof:
+  - bounty precisa estar OPEN
+  - deadline nao pode ter passado
+  - nullifier precisa estar unused
+  - contrato recalcula `statement_hash` a partir da metadata do bounty
+  - public inputs precisam conter o `statement_hash`, `reserve_x` e `reserve_y` esperados
+  - verifier(proof, public_inputs) precisa retornar true
+  - grava nullifier como used
+  - status = PROOF_VERIFIED
+  - reserved_researcher = researcher
+
+submit_report_hash:
+  - somente reserved_researcher
+  - status precisa ser PROOF_VERIFIED
+  - grava report_hash
+  - status = REPORT_SUBMITTED
+
+claim_reward:
+  - somente reserved_researcher
+  - status precisa ser REPORT_SUBMITTED
+  - transfere reward_token para researcher
+  - reputation[researcher].score += 10
+  - reputation[researcher].discoveries += 1
+  - status = CLAIMED
 ```
 
-## 6. Reputacao
-
-Para MVP, reputacao deve ser simples e nao-transferivel.
-
-Contrato ou storage no escrow:
+### Eventos
 
 ```text
-score[address] += 10 quando proof valida e report_hash existe
-discoveries[address] += 1
-last_discovery[address] = ledger_timestamp
+BountyCreated(bounty_id, target_contract, invariant_id, reward_amount)
+ProofVerified(bounty_id, researcher, witness_commitment, nullifier)
+RewardLocked(bounty_id, researcher, reward_amount)
+ReportSubmitted(bounty_id, researcher, report_hash)
+RewardClaimed(bounty_id, researcher, reward_amount)
+ReputationUpdated(researcher, score, discoveries)
 ```
 
-Nao incluir:
+## 7. Verifier
 
-- token transferivel;
-- marketplace de reputacao;
-- staking de reputacao;
-- multiplicador automatico de recompensa.
+O verifier deve ser tratado como componente de maior risco. Plano:
 
-Esses itens sao visao futura.
+1. Primeiro, rodar Groth16 localmente fora da chain e provar que o circuito aceita/rejeita corretamente.
+2. Depois, integrar o contrato Groth16 Soroban com uma proof fixa.
+3. Por ultimo, conectar `BountyEscrow.submit_proof` ao verifier.
 
-## 7. Fluxos de demo
+Durante o desenvolvimento inicial do escrow, e aceitavel usar um `MockVerifier` em testes unitarios. A demo final precisa ter pelo menos um caminho com proof real verificada em Soroban. Se isso falhar, o README/video deve declarar explicitamente o que ficou mockado.
+
+## 8. Fluxos obrigatorios de demo
 
 ### Fluxo 1: bounty criado
 
-1. Owner cria bounty para AMM vulneravel.
-2. Deposita recompensa em token Soroban.
-3. UI mostra invariante e recompensa.
+1. Owner deploya AMM vulneravel.
+2. Owner cria bounty para `constant_product_v1`.
+3. Owner deposita recompensa.
+4. CLI mostra status `OPEN`.
 
 ### Fluxo 2: proof valida
 
 1. Researcher usa um `dx` secreto.
-2. CLI gera proof.
+2. CLI gera proof sem imprimir `dx`.
 3. Researcher submete proof.
 4. Verifier passa.
 5. Escrow muda para `PROOF_VERIFIED`.
@@ -244,69 +317,94 @@ Esses itens sao visao futura.
 
 ### Fluxo 3: proof invalida
 
-1. Researcher tenta enviar proof errada ou public inputs alterados.
+1. CLI altera public input ou usa proof errada.
 2. Verifier falha.
 3. Escrow permanece `OPEN`.
 4. Reputacao nao muda.
 
 ### Fluxo 4: duplicate bloqueado
 
-1. Mesmo nullifier tenta ser submetido de novo.
+1. Mesmo nullifier e submetido de novo.
 2. Contrato rejeita.
-3. UI mostra `duplicate discovery`.
+3. CLI mostra `duplicate discovery`.
+
+No MVP, cada bounty aceita apenas o primeiro proof valido porque o status sai de `OPEN`. O nullifier bloqueia replay/duplicata tecnica; deteccao de bugs semanticamente equivalentes fica fora do escopo.
 
 ### Fluxo 5: claim e reputacao
 
-1. Researcher submete hash do report.
+1. Researcher submete `report_hash`.
 2. Researcher chama `claim_reward`.
 3. Token e transferido.
 4. Score sobe de `0` para `10`.
 
-## 8. Ordem de implementacao
+## 9. Ordem de implementacao
+
+### Gate 0: validar tooling ZK/Soroban
+
+Objetivo: reduzir risco antes de escrever muito codigo de produto.
+
+1. Confirmar toolchain Stellar CLI/Rust/Soroban local.
+2. Confirmar toolchain Circom/snarkjs ou alternativa Groth16 disponivel no ambiente.
+3. Rodar exemplo minimo de Groth16 verifier Soroban, mesmo que com proof dummy do exemplo.
+4. Decidir se a demo final roda em localnet ou testnet.
+
+Saida esperada: comando documentado em `docs/demo-script.md` que verifica uma proof em Soroban.
+
+### Gate 1: contratos sem ZK real
 
 1. Scaffold Soroban workspace.
-2. Implementar token mock ou usar SAC testnet.
-3. Implementar `BountyEscrow` sem verifier, usando flag fake apenas em teste local.
-4. Implementar `Reputation` simples.
-5. Criar AMM vulneravel e teste que encontra um `dx` que quebra invariante.
-6. Implementar circuito local.
-7. Gerar proof e verification key.
-8. Integrar verifier Soroban.
-9. Conectar `submit_proof` ao verifier.
-10. Criar CLI de demo.
-11. Criar README e roteiro de video.
+2. Implementar token mock ou integrar SAC local.
+3. Implementar `BountyEscrow` com `MockVerifier`.
+4. Testar create, submit valido, submit invalido, duplicate, report hash, claim e reputacao.
 
-## 9. Path ZK recomendado
+Saida esperada: testes unitarios do fluxo de bounty completos.
 
-### Path A: Circom + Groth16
+### Gate 2: AMM alvo
 
-Recomendado para hackathon se o foco for reduzir risco.
+1. Implementar `vulnerable-amm`.
+2. Adicionar teste que demonstra numericamente que existe `dx` quebrando a invariante.
+3. Fixar parametros de demo (`reserve_x`, `reserve_y`, `dx`) para o circuito.
 
-Motivos:
+Saida esperada: teste Soroban do AMM vulneravel + valores de demo.
 
-- Existe exemplo de Groth16 verifier em Soroban.
-- Stellar Private Payments usa Circom + Groth16 em Soroban.
-- Groth16 tem proof pequena e verificacao eficiente.
+### Gate 3: circuito e proof
 
-Trade-off:
+1. Implementar `amm_invariant.circom`.
+2. Criar teste positivo com o `dx` secreto.
+3. Criar testes negativos:
+   - `dx = 0`;
+   - public reserve alterado;
+   - witness que nao quebra invariante;
+   - nullifier/commitment inconsistente.
+4. Gerar proof, verification key e calldata/public inputs.
 
-- Circom e mais verboso.
-- Division e comparacoes precisam ser implementadas com cuidado.
+Saida esperada: proof real local com public inputs finais.
 
-### Path B: Noir + UltraHonk
+### Gate 4: integracao on-chain real
 
-Bom se o time ja tiver verifier UltraHonk rodando.
+1. Integrar Groth16 verifier Soroban.
+2. Converter proof/public inputs para tipos aceitos pelo contrato.
+3. Trocar `MockVerifier` por verifier real em `submit_proof`.
+4. Medir custo/fee real da verificacao no ambiente usado.
 
-Motivos:
+Saida esperada: proof real aceita on-chain e proof invalida rejeitada.
 
-- Linguagem mais ergonomica.
-- Melhor para iterar no circuito.
-- Protocol 26 melhora a viabilidade de verificacao.
+### Gate 5: CLI e roteiro
 
-Trade-off:
+1. Criar CLI de demo com comandos:
+   - `setup`
+   - `find-witness`
+   - `prove`
+   - `submit-proof`
+   - `submit-invalid`
+   - `submit-duplicate`
+   - `submit-report`
+   - `claim`
+   - `status`
+2. Escrever `docs/demo-script.md`.
+3. Atualizar README com escopo, arquitetura e limitacoes honestas.
 
-- Integracao on-chain pode consumir mais tempo.
-- Nao escolher sem testar verifier primeiro.
+Saida esperada: demo reproduzivel em 2-3 minutos.
 
 ## 10. Criterios de sucesso
 
@@ -314,55 +412,80 @@ O MVP esta pronto se:
 
 1. Bounty e criado on-chain.
 2. Recompensa fica em escrow.
-3. Proof valida e verificada pelo contrato.
-4. Proof invalida falha.
-5. Nullifier impede duplicata.
-6. Recompensa e reservada/liberada.
-7. Reputacao muda on-chain.
-8. README explica claramente que o MVP prova uma invariante, nao qualquer bug arbitrario.
+3. Proof ZK real e gerada off-chain.
+4. Proof valida e verificada pelo contrato Soroban.
+5. Proof invalida falha.
+6. Nullifier impede duplicata.
+7. Recompensa e reservada/liberada apos `report_hash`.
+8. Reputacao muda on-chain.
+9. README explica claramente que o MVP prova uma invariante, nao qualquer bug arbitrario.
+10. O video mostra o papel load-bearing do ZK e da Stellar.
 
-## 11. Riscos tecnicos
+## 11. Riscos tecnicos e mitigacoes
 
 ### Verifier on-chain atrasar
 
 Mitigacao:
 
-- Comecar pelo exemplo Groth16.
-- Manter circuito pequeno.
-- Medir custo real cedo.
+- validar o exemplo Groth16 antes de expandir UI;
+- manter circuito pequeno;
+- manter `MockVerifier` apenas para desenvolvimento paralelo;
+- medir custo real cedo e evitar claims fixos tipo "1 XLM" sem benchmark.
 
 ### Circuito aceitar witness invalido
 
 Mitigacao:
 
-- Testar casos positivos e negativos.
-- Fixar bounds.
-- Evitar arithmetic complexa demais.
-- Publicar circuit hash no bounty.
+- bounds pequenos;
+- division por quotient/remainder;
+- testes negativos obrigatorios;
+- publicar `circuit_hash` e `verification_key_hash` no bounty ou README.
+
+### Conversao proof/public inputs travar
+
+Mitigacao:
+
+- criar script unico de exportacao para o formato Soroban;
+- congelar ordem dos public inputs;
+- adicionar teste que compara hash/ordem dos inputs no CLI e no contrato.
 
 ### Demo parecer artificial
 
 Mitigacao:
 
-- Usar bug financeiro intuitivo.
-- Mostrar invariant break numericamente apos claim.
-- Explicar que o produto generaliza para templates de invariantes.
+- usar bug financeiro intuitivo;
+- mostrar invariant break numericamente so depois do reward lock/report hash;
+- explicar que o produto comeca por templates de invariantes, nao por reports subjetivos.
 
 ### Critica de "nao prova Soroban VM"
 
 Resposta:
 
-**O MVP prova o modelo publico da funcao alvo. Provar a VM inteira seria pesquisa pesada. O produto comeca por invariant templates, como bug bounties objetivos para propriedades financeiras.**
+**O MVP prova o modelo publico da funcao alvo. Provar a VM inteira seria pesquisa pesada. O produto comeca por invariant templates, que sao a parte objetiva e verificavel de muitos bug bounties financeiros.**
 
 ## 12. Roteiro de video tecnico
 
 1. Mostrar bounty aberto: "AMM invariant: constant product must not decrease".
-2. Mostrar AMM vulneravel com formula errada.
-3. Rodar CLI: `find-witness`, sem revelar `dx`.
+2. Mostrar AMM vulneravel e explicar a formula errada sem revelar o `dx`.
+3. Rodar CLI: `find-witness`, sem imprimir o witness.
 4. Rodar CLI: `prove`, gerando proof.
 5. Submeter proof para Soroban.
 6. Mostrar evento `ProofVerified`.
-7. Mostrar reward locked.
-8. Submeter `report_hash`.
-9. Fazer claim.
-10. Mostrar leaderboard com score atualizado.
+7. Mostrar reward locked/reserved.
+8. Rodar caso invalido falhando.
+9. Rodar duplicate falhando.
+10. Submeter `report_hash`.
+11. Fazer claim.
+12. Mostrar leaderboard/reputation atualizado.
+
+## 13. O que ainda falta definir
+
+Nao falta decisao de produto para comecar a desenvolver. O escopo tecnico esta fechado para o MVP.
+
+Faltam apenas validacoes de ambiente/tooling, que devem ser feitas no Gate 0:
+
+1. Qual exemplo Groth16 Soroban sera usado como base concreta.
+2. Se a demo final roda em localnet ou testnet.
+3. Se o token de recompensa sera mock local ou SAC/USDC testnet.
+
+Se qualquer uma dessas validacoes falhar, a decisao de produto nao muda; ajusta-se apenas o nivel de integracao demonstravel e isso deve ser declarado no README/video.
