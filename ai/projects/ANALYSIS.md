@@ -1,16 +1,17 @@
 # Análise Comparativa das Ideias — Concorrentes, Viabilidade e Forças/Fraquezas
 
-> Documento transversal do workspace. Compara as três ideias em `projects/*` sob três lentes: **concorrentes**, **viabilidade de negócio** e **pontos fortes/fracos**. Serve para decidir onde investir o tempo restante do hackathon (**deadline ~3 jul 2026**). Cada `IDEA.md` continua sendo a fonte autocontida da respectiva ideia; aqui é a visão de portfólio.
+> Documento transversal do workspace. Compara as quatro ideias em `projects/*` sob três lentes: **concorrentes**, **viabilidade de negócio** e **pontos fortes/fracos**. Serve para decidir onde investir o tempo restante do hackathon (**deadline ~3 jul 2026**). Cada `IDEA.md` continua sendo a fonte autocontida da respectiva ideia; aqui é a visão de portfólio.
 
 ## 0. Resumo Executivo
 
 | Ideia | Tese em uma linha | ZK load-bearing? | Escopo p/ MVP | Viabilidade negócio | Risco hackathon |
 | --- | --- | --- | --- | --- | --- |
-| **compliance-zk** (Agent Payment Vault) | Cofre Soroban que só paga se a política for verificável; ZK opcional para whitelist/credencial privada. | **Parcial** — ZK é *opcional*, regras públicas já resolvem o core. | **Baixo** (mais fácil de demonstrar). | **Alta** — narrativa de agentic payments está quente. | ZK pode parecer decorativo → fere a regra core do hackathon. |
-| **offchain-confidential-debt-raise** | Empresa off-chain capta dívida com saúde provada por ZK, valor e balanço privados. | **Sim** — anti-limão + threshold oculto quebram sem ZK. | **Alto** (oráculo assinado + 2 circuitos + escrow). | **Média/Alta** (mercado grande, mas regulatório pesado). | Escopo grande + dependência de oráculo/fonte de dados. |
-| **confidential-debt-raise** (on-chain) | Protocolo já on-chain capta dívida com valor oculto, saúde provada sobre estado on-chain. | **Sim** — igual à irmã, sem o problema do oráculo. | **Médio** (oráculo dissolvido corta 1 subsistema). | **Média** (mercado menor e mais jovem). | Métrica de capacidade on-chain ainda indefinida. |
+| **compliance-zk** (Agent Payment Vault) | Cofre Soroban que só paga se a política for verificável; ZK opcional para whitelist/credencial privada. | **Parcial** — ZK é *opcional*, regras públicas já resolvem o core. | **Baixo** (fácil de demonstrar). | **Alta** — narrativa de agentic payments quente. | ZK pode parecer decorativo → fere regra core. |
+| **offchain-confidential-debt-raise** | Empresa off-chain capta dívida com saúde provada por ZK, valor e balanço privados. | **Sim** — anti-limão + threshold oculto quebram sem ZK. | **Alto** (oráculo assinado + 2 circuitos + escrow). | **Média/Alta** (mercado grande, regulatório pesado). | Escopo grande + dependência de oráculo. |
+| **confidential-debt-raise** (on-chain) | Protocolo já on-chain capta dívida com valor oculto, saúde provada sobre estado on-chain. | **Sim** — igual à irmã, sem oráculo. | **Médio** (oráculo dissolvido corta 1 subsistema). | **Média** (mercado menor e jovem). | Métrica de capacidade on-chain indefinida. |
+| **zk-bounty** | Escrow trustless de bug bounty: hacker prova ZK que achou a falha; exploit só revelado após recompensa travada. | **Sim** — provar vuln sem revelar witness é o núcleo. | **Baixo/Médio** (escrow + circuito toy). | **Média** — dor real, mas produto real é tecnicamente duro. | Baixo p/ demo; **gap enorme entre MVP toy e produto real**. |
 
-**Recomendação p/ hackathon:** ver §5.
+**Recomendação p/ hackathon:** ver §6.
 
 ---
 
@@ -20,38 +21,38 @@
 
 | Concorrente | Categoria | O que cobre | Gap que a ideia explora |
 | --- | --- | --- | --- |
-| **Circle Agent Stack** | Custodial / stack fechada | Agent wallets, spending controls, compliance guardrails, USDC. | Fechado, infra da Circle. Enforcement não vive on-chain. |
-| **Turnkey** | Custody / key mgmt | Wallets programáveis, policy engine, limites por escopo. | Enforcement depende da infra Turnkey, não de contrato público. |
-| **Fireblocks Agentic Payments** | Enterprise | Policy engine, KYT, Travel Rule, audit trail. | Maduro mas fechado/enterprise; sem primitive aberta composável. |
-| **x402 / Stellar x402** | Protocolo de pagamento | "Como" o agente paga API/serviço. | Resolve o pagamento, não "quem pode, quanto, p/ quem, sob qual política". |
-| **zkMe / Privado ID** | ZK identity | KYC/KYB e credenciais privadas. | Provam identidade; não são vault de pagamento Stellar-native. |
-| **Safe (ex-Gnosis) modules / smart accounts** | Account abstraction | Módulos de policy/limite em contas smart (EVM). | Equivalente conceitual em EVM — reforça que a dor é real; gap é Stellar-native + ZK. |
+| **Circle Agent Stack** | Custodial / stack fechada | Agent wallets, spending controls, USDC. | Fechado; enforcement não vive on-chain. |
+| **Turnkey** | Custody / key mgmt | Wallets programáveis, policy engine, limites. | Enforcement depende da infra Turnkey. |
+| **Fireblocks Agentic Payments** | Enterprise | Policy engine, KYT, Travel Rule, audit trail. | Maduro mas fechado/enterprise. |
+| **x402 / Stellar x402** | Protocolo de pagamento | "Como" o agente paga API/serviço. | Não resolve "quem pode, quanto, p/ quem". |
+| **zkMe / Privado ID** | ZK identity | KYC/KYB e credenciais privadas. | Provam identidade; não são vault Stellar-native. |
+| **Safe (ex-Gnosis) modules** | Account abstraction | Módulos de policy/limite em smart accounts (EVM). | Equivalente EVM — valida a dor; gap = Stellar + ZK. |
 
-**Leitura:** espaço **lotado e bem-capitalizado**. A dor está validada (bom sinal de mercado, mau sinal de diferenciação). Diferencial real = *enforcement on-chain em Soroban + privacy-preserving compliance*, recorte estreito.
+**Leitura:** espaço **lotado e bem-capitalizado**. Dor validada (bom p/ mercado, mau p/ diferenciação). Diferencial = *enforcement on-chain Soroban + privacy-preserving compliance*, recorte estreito.
 
 ### 1.2 Viabilidade de negócio
 
-- **Timing:** excelente. Agentic payments é narrativa de 2025–2026; investidor e mídia atentos.
-- **Monetização:** fee por volume ou por vault; alinhado ao valor protegido. Precisa de **volume real de agentes** movendo dinheiro — ainda incipiente.
-- **Go-to-market:** primitive aberta compete com plataformas turnkey de UX pronta. Adoção depende de devs quererem montar sobre um contrato aberto vs. comprar Circle/Turnkey já resolvido. **Fricção alta.**
-- **Fosso:** raso. Contrato de vault com policy é copiável; o valor está em rede/integrações que a ideia não tem.
-- **Regulatório:** custódia programática de fundos de terceiros → possível money transmitter dependendo do desenho. O escrow-no-contrato atenua, mas não zera.
+- **Timing:** excelente. Agentic payments é narrativa 2025–2026.
+- **Monetização:** fee por volume/vault; precisa de **volume real de agentes** — ainda incipiente.
+- **GTM:** primitive aberta compete com plataformas turnkey de UX pronta. **Fricção alta** de adoção.
+- **Fosso:** raso. Vault com policy é copiável; valor está em rede/integrações que a ideia não tem.
+- **Regulatório:** custódia programática de fundos de terceiros → possível money transmitter dependendo do desenho.
 
-**Veredito:** boa dor, mercado quente, **fosso fraco e ZK acessório**. Vira produto se for a camada open-source de referência que grandes players integram, não um app final.
+**Veredito:** boa dor, mercado quente, **fosso fraco e ZK acessório**. Vira produto se for a camada open-source de referência que grandes integram, não app final.
 
 ### 1.3 Forças e fraquezas
 
 **Forças**
 - Demo objetiva: aprovado vs. bloqueado em minutos → ótimo p/ juízes.
-- Menor escopo técnico → mais chance de terminar antes do deadline.
-- Narrativa de mercado (AI agents) atrai atenção imediata.
+- Menor escopo técnico → termina antes do deadline.
+- Narrativa AI agents atrai atenção imediata.
 
 **Fraquezas**
-- **ZK é opcional** — as regras públicas (limite, whitelist, diário) já resolvem o core. Fere a regra "ZK load-bearing"; juiz pode ver ZK como enfeite.
+- **ZK é opcional** — regras públicas já resolvem o core. Fere "ZK load-bearing".
 - Diferenciação frágil contra incumbentes fortes.
 - Sem privacidade obrigatória, é "só mais um vault com policy".
 
-**Como blindar p/ hackathon:** tornar o ZK *não removível* — ex.: whitelist/credencial de fornecedor **tem** de ser privada (a política é o segredo de negócio), de modo que sem ZK o produto não existe. Reposicionar de "vault com ZK opcional" para "vault cuja política **é** privada por construção".
+**Blindar:** tornar ZK *não removível* — whitelist/credencial de fornecedor **tem** de ser privada (política = segredo de negócio). Reposicionar de "vault com ZK opcional" para "vault cuja política **é** privada por construção".
 
 ---
 
@@ -61,43 +62,43 @@
 
 | Concorrente | Categoria | O que cobre | Gap que a ideia explora |
 | --- | --- | --- | --- |
-| **Maple Finance** | Crédito institucional on-chain | Empréstimo sub-colateralizado. | Transparente em valores/termos; aqui valor + números privados. |
-| **Goldfinch** | RWA credit | Underwriting por pools delegadas p/ tomador off-chain. | Sem privacidade de valor nem prova ZK de cobertura. |
-| **Centrifuge** | RWA / recebíveis | Securitização tokenizada aberta. | Estrutura aberta; diferencial = confidencialidade + gate de saúde. |
+| **Maple Finance** | Crédito institucional on-chain | Empréstimo sub-colateralizado. | Transparente; aqui valor + números privados. |
+| **Goldfinch** | RWA credit | Underwriting por pools delegadas. | Sem privacidade de valor nem prova ZK de cobertura. |
+| **Centrifuge** | RWA / recebíveis | Securitização tokenizada aberta. | Diferencial = confidencialidade + gate de saúde. |
 | **Credix, Clearpool, TrueFi** | Private credit on-chain | Pools de crédito privado, KYC de tomador. | Termos/valores visíveis; sem anti-limão por ZK. |
-| **Bancos / factoring tradicional** | Off-chain | Crédito com colateral e disclosure total. | O status quo que a ideia ataca (vazamento, lentidão, spread). |
+| **Bancos / factoring** | Off-chain | Crédito com colateral e disclosure total. | Status quo que a ideia ataca. |
 | **Aztec / DeFi privado** | Privacidade genérica | Privacidade de transação. | Não é captação com prova de solvência como filtro. |
 
-**Leitura:** private credit on-chain é categoria **real e crescente** (Maple/Centrifuge movem centenas de milhões). Ninguém combina **valor oculto + prova de saúde como gate anti-limão**. Diferencial conceitual **forte e defensável**.
+**Leitura:** private credit on-chain é categoria **real e crescente**. Ninguém combina **valor oculto + prova de saúde como gate anti-limão**. Diferencial conceitual **forte**.
 
 ### 2.2 Viabilidade de negócio
 
-- **TAM:** grande — crédito PME é trilhões; RWA on-chain é uma das teses mais quentes.
-- **Monetização:** fee por captação/volume; alinhado e escalável se houver fluxo.
-- **A dor é real e cara:** vazamento de informação ao captar tem custo mensurável. Anti-limão por ZK é argumento economicamente sólido (sinal custoso de imitar).
+- **TAM:** grande — crédito PME é trilhões; RWA on-chain tese quente.
+- **Monetização:** fee por captação/volume; escalável se houver fluxo.
+- **Dor real e cara:** vazamento de info ao captar tem custo mensurável. Anti-limão por ZK é economicamente sólido.
 - **Barreiras:**
-  - **Fonte de dados/oráculo** é o calcanhar. ZK prova a conta, não a verdade dos inputs → precisa de atestação assinada por fonte não controlada pela empresa. Em produção isso é Open Finance/auditor/bureau — **integração pesada e por jurisdição**.
-  - **Completude:** provar um número real não prova que não há dívida escondida em outro lugar. Mitigação séria = produção.
-  - **Enforcement/default:** empresa off-chain que não paga → cobrança fora da cadeia. O contrato não resolve inadimplência do mundo real. **Isso é o furo comercial mais grave.**
-  - **Regulatório:** oferta de dívida a investidores = securities law em quase todo lugar. Sério.
-- **Fosso:** conceito + rede de provedores de atestação + reputação on-chain acumulada. **Bom fosso se atingir escala.**
+  - **Oráculo/fonte de dados** é o calcanhar. ZK prova a conta, não a verdade dos inputs → atestação assinada por fonte não controlada. Em produção = Open Finance/auditor/bureau, integração pesada por jurisdição.
+  - **Completude:** provar um número real não prova ausência de dívida escondida.
+  - **Enforcement/default:** empresa off-chain que não paga → cobrança fora da cadeia. Contrato não resolve inadimplência real. **Furo comercial mais grave.**
+  - **Regulatório:** oferta de dívida = securities law. Sério.
+- **Fosso:** conceito + rede de provedores de atestação + reputação on-chain. **Bom se atingir escala.**
 
-**Veredito:** a ideia **mais ambiciosa e com maior teto**, mas viabilidade real depende de resolver oráculo, enforcement e regulatório — nenhum trivial. Excelente tese, produto difícil.
+**Veredito:** a **mais ambiciosa e maior teto**, mas depende de resolver oráculo, enforcement e regulatório — nenhum trivial. Ótima tese, produto difícil.
 
 ### 2.3 Forças e fraquezas
 
 **Forças**
-- ZK genuinamente **load-bearing** em dois pontos (threshold oculto + cobertura). Não removível.
-- Narrativa anti-limão é intelectualmente forte — bom diferencial de pitch.
+- ZK genuinamente **load-bearing** em dois pontos. Não removível.
+- Narrativa anti-limão forte p/ pitch.
 - Mercado grande, dor cara, privacidade seletiva bem pensada.
 
 **Fraquezas**
-- **Escopo do MVP grande:** escrow + 2 circuitos + oráculo mock assinado + frontend. Risco de não terminar até 3 jul.
-- Depende de oráculo/fonte assinada — a parte mais frágil e a que mais "explica-se no README" em vez de demonstrar.
-- Enforcement de default fora da cadeia = a promessa "trustless" tem limite real.
-- Regulatório de securities pesado (fora do MVP, mas mina "produto").
+- **Escopo MVP grande:** escrow + 2 circuitos + oráculo mock + frontend. Risco de não terminar até 3 jul.
+- Depende de oráculo — parte mais frágil, mais "explicada no README" que demonstrada.
+- Enforcement de default fora da cadeia limita o "trustless".
+- Regulatório securities pesado.
 
-**Como blindar p/ hackathon:** cortar escopo agressivo — oráculo mock assinado *minimalista*, focar a demo nos **dois circuitos ZK** (é o que os juízes premiam) e narrar enforcement/regulatório como roadmap.
+**Blindar:** cortar escopo agressivo — oráculo mock minimalista, focar demo nos **dois circuitos ZK**, narrar enforcement/regulatório como roadmap.
 
 ---
 
@@ -108,64 +109,113 @@
 | Concorrente | Categoria | O que cobre | Gap que a ideia explora |
 | --- | --- | --- | --- |
 | **Maple Finance** | Crédito institucional | Empréstimo on-chain. | Transparente; aqui valor privado + saúde por ZK. |
-| **Blend (Stellar)** | Lending pool nativo Stellar | Empréstimo colateralizado aberto. | Sem captação de valor oculto nem prova de saúde. Concorrente/vizinho direto no ecossistema. |
-| **DAO treasury tooling (Aragon, etc.)** | Governança de tesouraria | Gestão de fundos on-chain. | Não faz captação de dívida privada com prova. |
+| **Blend (Stellar)** | Lending pool nativo Stellar | Empréstimo colateralizado aberto. | Sem captação de valor oculto nem prova de saúde. Vizinho direto no ecossistema. |
+| **DAO treasury tooling (Aragon)** | Governança de tesouraria | Gestão de fundos on-chain. | Não faz captação de dívida privada com prova. |
 | **Aztec / DeFi privado** | Privacidade genérica | Privacidade de transação. | Não é captação com prova de solvência. |
 
-**Leitura:** mercado **menor e mais jovem** que o off-chain, mas **muito mais crível tecnicamente** — o dado já é on-chain, o oráculo dissolve.
+**Leitura:** mercado **menor e mais jovem** que o off-chain, mas **muito mais crível tecnicamente** — dado já on-chain, oráculo dissolve.
 
 ### 3.2 Viabilidade de negócio
 
-- **TAM:** menor — protocolos/DAOs na Stellar que precisam de runway. Nicho, hoje pequeno.
-- **A grande vantagem:** **oráculo dissolvido** — dado nativamente verificável mata o *garbage-in* e a integração mais frágil da irmã off-chain.
-- **Reputação nativa:** histórico de repagamento on-chain habilita crédito por reputação sem KYC externo. Fosso composável real.
-- **Fluxo 100% on-chain:** sem leg fiat → sem money transmitter, sem anchor, muito mais simples de demonstrar e operar.
-- **Tese de token forte:** proteger valuation ao vivo contra distress signaling é dor genuína e específica de quem tem token líquido.
-- **Contra:** parte da comunidade crypto **espera transparência** — privacidade de captação pode gerar desconfiança; o pitch precisa enquadrar como anti-distress, não como ocultação. Mercado endereçável hoje é raso.
+- **TAM:** menor — protocolos/DAOs na Stellar que precisam de runway. Nicho hoje.
+- **Vantagem-chave:** **oráculo dissolvido** — dado nativamente verificável mata *garbage-in* e a integração mais frágil da irmã.
+- **Reputação nativa:** histórico de repagamento on-chain habilita crédito por reputação sem KYC. Fosso composável.
+- **Fluxo 100% on-chain:** sem leg fiat → sem money transmitter, sem anchor, fácil de demonstrar.
+- **Tese de token forte:** proteger valuation ao vivo contra distress signaling é dor genuína e específica.
+- **Contra:** parte da comunidade crypto **espera transparência** → pitch precisa enquadrar como anti-distress. Mercado endereçável raso hoje.
 
-**Veredito:** **melhor relação viabilidade/esforço** das três. Menor teto de mercado que a off-chain, mas muito mais executável e defensável tecnicamente.
+**Veredito:** **melhor relação viabilidade/esforço**. Menor teto que a off-chain, muito mais executável e defensável.
 
 ### 3.3 Forças e fraquezas
 
 **Forças**
-- **Oráculo dissolvido** → corta o subsistema mais arriscado; MVP menor que a irmã.
-- ZK load-bearing e prova ancorada em estado real → mais crível para juízes.
-- Fluxo 100% on-chain → demo limpa, sem hand-waving de fiat.
-- **Dogfooding da Stellar** (Blend, DEXs) → agrada juízes do ecossistema.
-- Reputação e enforcement mais naturais que na off-chain.
+- **Oráculo dissolvido** → corta subsistema mais arriscado; MVP menor.
+- ZK load-bearing ancorado em estado real → crível p/ juízes.
+- Fluxo 100% on-chain → demo limpa.
+- **Dogfooding Stellar** (Blend, DEXs) → agrada juízes.
+- Reputação/enforcement mais naturais.
 
 **Fraquezas**
-- **Métrica de capacidade on-chain ainda indefinida** (tesouraria? TVL? receita?) — é o coração do circuito e está em aberto. Precisa fechar já.
-- Mercado hoje pequeno → tese de negócio de longo prazo mais fraca que a off-chain.
-- Enforcement de default ainda não resolvido no contrato (aberto).
-- Narrativa "privacidade em crypto" pode gerar atrito cultural.
+- **Métrica de capacidade on-chain indefinida** (tesouraria? TVL? receita?) — coração do circuito, em aberto. Fechar já.
+- Mercado pequeno hoje → tese de longo prazo mais fraca.
+- Enforcement de default ainda aberto no contrato.
+- Atrito cultural "privacidade em crypto".
 
-**Como blindar p/ hackathon:** fechar a métrica de capacidade rápido (ex.: obrigação ≤ k·tesouraria líquida verificável) e reaproveitar máximo do Stellar Private Payments PoC.
+**Blindar:** fechar métrica rápido (ex.: obrigação ≤ k·tesouraria líquida verificável), reusar máximo do Private Payments PoC.
 
 ---
 
-## 4. Cruzamento Direto
+## 4. zk-bounty
 
-| Critério | compliance-zk | offchain-debt | onchain-debt |
+### 4.1 Concorrentes
+
+| Concorrente | Categoria | O que cobre | Gap que a ideia explora |
 | --- | --- | --- | --- |
-| ZK realmente essencial | ⚠️ opcional | ✅ sim | ✅ sim |
-| Facilidade de terminar até 3 jul | ✅ alta | ❌ baixa | 🟡 média |
-| Impressiona juízes de ZK | 🟡 médio | ✅ alto | ✅ alto |
-| Aderência ao pitch da Stellar | ✅ pagamentos | 🟡 cross-border | ✅ dogfooding DeFi |
-| Diferenciação vs. concorrentes | ❌ fraca | ✅ forte | ✅ forte |
-| Teto de mercado (negócio) | 🟡 médio | ✅ alto | 🟡 nicho |
-| Risco de execução | ✅ baixo | ❌ alto | 🟡 médio |
+| **HackerOne / Bugcrowd** | Bug bounty centralizado | Triagem, mediação humana, taxas altas. | Centralizado, sem confiança matemática nem escrow trustless. |
+| **Immunefi** | Bug bounty Web3 | Líder DeFi; triagem intermediada, PoC manual. | Ainda depende de avaliação humana; sem prova ZK de disclosure. |
+| **Hats Finance** | Bounty on-chain | Escrow/vaults on-chain, pagamento programático. | **Concorrente mais direto**: já faz escrow on-chain, mas sem prova ZK do exploit. |
+| **Code4rena / Sherlock / Cantina** | Contest de auditoria | Competição paga de achados, julgada por humanos. | Modelo de contest, não disclosure privado provado por ZK. |
+| **"Proof of exploit" (RISC Zero / zkVM PoCs)** | Research | Provar execução de exploit via zkVM. | Base técnica emergente; ninguém entregou produto de bounty sobre isso. |
+
+**Leitura:** bounty on-chain **já existe** (Hats, Immunefi vaults). Diferencial = **prova ZK de que o exploit é válido sem revelá-lo** antes do pagamento travado. Recorte novo, mas tecnicamente o mais audacioso.
+
+### 4.2 Viabilidade de negócio
+
+- **Dor real:** desconfiança bidirecional (hacker teme não receber; empresa teme relatório falso). Legítima e conhecida.
+- **Monetização:** fee por bounty intermediado; two-sided marketplace com **cold start** clássico (precisa de empresas E hackers ao mesmo tempo).
+- **O gap central:** o MVP prova um **predicado fixo toy** ("conheço x que leva ao estado de erro Y"). Provar exploit de **software arbitrário real** exige expressar o alvo como circuito/zkVM — problema **essencialmente não resolvido em escala prática**. A distância entre a demo e o produto real é o maior risco de tese.
+- **Problema do ovo-e-galinha:** para definir a "condição de falha" como circuito, o autor do desafio precisa **formalizar o que é a vulnerabilidade** — trivial no toy, quase impossível para bugs desconhecidos em código real. Se soubesse formalizar a falha, já conheceria o bug.
+- **Nicho viável de verdade:** **smart contracts** (Soroban/EVM) — invariantes formalizáveis ("prove que consegue quebrar o invariante de saldo") via zkVM/execução verificável. É aí que o produto real pode existir; software genérico não.
+- **Regulatório:** leve comparado às ideias de dívida.
+
+**Veredito:** dor legítima, mas **viabilidade de produto real limitada ao subdomínio de invariantes formalizáveis** (contratos). Como produto genérico de bounty, o ZK esbarra em problema em aberto da área.
+
+### 4.3 Forças e fraquezas
+
+**Forças**
+- ZK inequivocamente **load-bearing** e fácil de explicar (provar sem revelar).
+- **Demo limpa e narrativa forte** — escrow + prova + pagamento em 3 min. Ótimo p/ juízes.
+- Escopo MVP contido; toca Stellar nativamente (escrow + verifier).
+- Tema segurança/hacking ético atrai atenção.
+
+**Fraquezas**
+- **Gap MVP↔produto enorme:** circuito toy demonstra a lógica, mas não o caso real (exploit de software arbitrário). Fácil de um juiz atento questionar.
+- **Ovo-e-galinha** na definição do predicado de falha.
+- Two-sided cold start; Hats/Immunefi já ocupam bounty on-chain.
+- Revelação do exploit pós-pagamento ainda depende de etapa off-chain / confiança residual (§9 do IDEA).
+
+**Blindar:** posicionar explicitamente no nicho de **invariantes de smart contract** (prova de quebra de invariante Soroban), não "bug de qualquer software". Assim MVP e produto real ficam na mesma trilha e o gap some.
 
 ---
 
-## 5. Recomendação p/ Hackathon
+## 5. Cruzamento Direto
+
+| Critério | compliance-zk | offchain-debt | onchain-debt | zk-bounty |
+| --- | --- | --- | --- | --- |
+| ZK realmente essencial | ⚠️ opcional | ✅ sim | ✅ sim | ✅ sim |
+| Facilidade de terminar até 3 jul | ✅ alta | ❌ baixa | 🟡 média | ✅ alta |
+| Impressiona juízes de ZK | 🟡 médio | ✅ alto | ✅ alto | ✅ alto |
+| Aderência ao pitch da Stellar | ✅ pagamentos | 🟡 cross-border | ✅ dogfooding DeFi | ✅ escrow/pagamento |
+| Diferenciação vs. concorrentes | ❌ fraca | ✅ forte | ✅ forte | 🟡 média (Hats existe) |
+| Teto de mercado (negócio) | 🟡 médio | ✅ alto | 🟡 nicho | 🟡 médio |
+| Clareza da demo | ✅ alta | 🟡 média | ✅ alta | ✅ alta |
+| Risco de execução | ✅ baixo | ❌ alto | 🟡 médio | ✅ baixo |
+| Gap MVP↔produto real | 🟡 médio | 🟡 médio | ✅ pequeno | ❌ grande |
+
+---
+
+## 6. Recomendação p/ Hackathon
 
 Critério do hackathon = **ZK load-bearing + toca Stellar + demo em 2–3 min + repo claro**, com ~3 dias.
 
-1. **Aposta principal: `confidential-debt-raise` (on-chain).** Melhor equilíbrio: ZK genuinamente essencial, oráculo dissolvido (menos risco de execução), fluxo 100% on-chain (demo limpa), dogfooding Stellar (agrada juízes), diferenciação forte. Ação imediata: **fechar a métrica de capacidade** e reusar o Private Payments PoC.
+1. **Aposta principal: `confidential-debt-raise` (on-chain).** Melhor equilíbrio: ZK essencial, oráculo dissolvido (menos risco), fluxo 100% on-chain (demo limpa), dogfooding Stellar, diferenciação forte, gap MVP↔produto pequeno. Ação imediata: **fechar a métrica de capacidade** e reusar o Private Payments PoC.
 
-2. **Se preferir maior teto de negócio e aceitar risco: `offchain-debt`.** Tese mais forte comercialmente, mas escopo grande e oráculo frágil ameaçam terminar a tempo. Só se cortar escopo com faca.
+2. **Melhor pura jogada de hackathon: `zk-bounty`.** Se o objetivo é **maximizar chance de ganhar o hackathon** (não construir empresa), é a mais forte: ZK inequívoco, demo cristalina, escopo pequeno, narrativa que vende sozinha. Custo: viabilidade de produto real limitada — bom para prêmio, fraco para virar negócio. **Blindar posicionando no nicho de invariantes de smart contract.**
 
-3. **`compliance-zk` como plano B seguro / demo garantida.** Menor risco de execução e narrativa quente, mas **precisa tornar o ZK não-removível** (política/whitelist privada obrigatória) antes de ser competitivo num hackathon de ZK — senão o juiz vê ZK decorativo.
+3. **Maior teto de negócio, maior risco: `offchain-debt`.** Tese comercial mais forte, mas escopo grande + oráculo frágil ameaçam o deadline. Só com corte de escopo agressivo.
 
-**Nota transversal:** as três compartilham o mesmo esqueleto técnico (contrato Soroban de escrow + verifier Groth16 + circuito de membership/threshold, base = Stellar Private Payments PoC). Isso **reduz o custo de trocar de ideia** — o trabalho de infra é reaproveitável. Aposte na on-chain, mantendo a off-chain como evolução narrada no pitch.
+4. **Plano B seguro: `compliance-zk`.** Menor risco de execução e narrativa quente, mas **precisa tornar o ZK não-removível** antes de ser competitivo num hackathon de ZK.
+
+**Nota transversal:** as quatro compartilham o mesmo esqueleto técnico (contrato Soroban de escrow + verifier Groth16 + circuito de membership/threshold/witness, base = Stellar Private Payments PoC). Isso **reduz o custo de trocar de ideia** — infra reaproveitável.
+
+**Decisão sugerida em uma linha:** se a meta é **ganhar o prêmio**, `zk-bounty` (nicho smart-contract) ou `onchain-debt`; se a meta é **germe de startup**, `onchain-debt` com `offchain-debt` como evolução narrada.
